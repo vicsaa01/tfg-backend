@@ -999,7 +999,7 @@ app.post('/edit-user', async (req, res) => {
 // Rutas para el registro de usuario y el inicio de sesión
 
 app.post('/register', async (req, res) => {
-  insertData = {'name': req.body.name, 'email': req.body.email, 'password': req.body.pass, 'info': req.body.info, 'created_at': Date.now()};
+  insertData = {'name': req.body.name, 'email': req.body.email, 'password': req.body.pass, 'created_at': Date.now()};
 
   // Comprobar que el nombre de usuario no se ha usado antes
   const user = await users.find({name: req.body.name});
