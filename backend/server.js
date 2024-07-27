@@ -955,7 +955,7 @@ app.post('/create-discussion', (req, res) => {
 })
 
 app.post('/add-item', (req, res) => {
-  insertData = {'name': req.body.name, 'info': req.body.info, 'type': req.body.type, 'genres': req.body.genres, 'year': req.body.year, 'country': req.body.country, 'creators': req.body.creators, 'producers': req.body.creators, 'length': req.body.length, 'platforms': req.body.platforms};
+  insertData = {'name': req.body.name, 'info': req.body.info, 'type': req.body.type, 'genres': req.body.genres, 'year': req.body.year, 'country': req.body.country, 'creators': req.body.creators, 'producers': req.body.producers, 'length': req.body.length, 'platforms': req.body.platforms};
   const newItem = new items(insertData);
   newItem.save();
   console.log(newItem);
