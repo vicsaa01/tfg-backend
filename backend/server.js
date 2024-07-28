@@ -490,10 +490,15 @@ app.post('/invite-user', async (req, res) => {
     const group_id = searchList[0]._id;
     const moderator = await members.find({group_id: group_id, user_id: req.body.sender, is_mod: true}).select('_id -user_id -group_id -is_mod -__v');
     if (moderator.length > 0) {
-      insertData = {'user': req.body.user, 'group': group_id, 'is_invite': true, 'created_at': Date.now()};
-      const newRequest = new requests(insertData);
-      newRequest.save();
-      res.status(201).json({message: 'Se ha enviado la invitación', user: req.body.user});
+      const membersList = await members.find({user_id: req.body.user, group_id: group_id}).select('_id -user_id -group_id -is_mod -__v');
+      if (membersList.length==0){
+        insertData = {'user': req.body.user, 'group': group_id, 'is_invite': true, 'created_at': Date.now()};
+        const newRequest = new requests(insertData);
+        newRequest.save();
+        res.status(201).json({message: 'Se ha enviado la invitación', user: req.body.user});
+      } else {
+        res.status(200).json({message: 'El usuario ya forma parte de este grupo'});
+      }
     } else {
       res.status(401).json({message: 'Debes ser un moderador del grupo para poder enviar invitaciones.'});
     }
@@ -503,18 +508,28 @@ app.post('/invite-user', async (req, res) => {
 })
 
 app.post('/send-request', async (req, res) => {
+  const membersList = await members.find({user_id: req.body.user, group_id: req.body.group}).select('_id -user_id -group_id -is_mod -__v');
+  if (membersList.length==0){
     insertData = {'user': req.body.user, 'group': req.body.group, 'is_invite': false, 'created_at': Date.now()};
     const newRequest = new requests(insertData);
     newRequest.save();
     res.json({message: 'Se ha enviado la solicitud'});
+  } else {
+    res.json({message: 'Ya formas parte de este grupo'});
+  }
 })
 
 app.post('/join-group', async (req, res) => {
-  insertData = {'user_id': req.body.user, 'group_id': req.body.group, 'is_mod': false};
-  const newMember = new members(insertData);
-  newMember.save();
-  const update = await groups.updateOne({_id: req.body.group}, { $inc: {members: 1}});
-  res.json({message: 'Te has unido al grupo'});
+  const membersList = await members.find({user_id: req.body.user, group_id: req.body.group}).select('_id -user_id -group_id -is_mod -__v');
+  if (membersList.length==0){
+    insertData = {'user_id': req.body.user, 'group_id': req.body.group, 'is_mod': false};
+    const newMember = new members(insertData);
+    newMember.save();
+    const update = await groups.updateOne({_id: req.body.group}, { $inc: {members: 1}});
+    res.json({message: 'Te has unido al grupo'});
+  } else {
+    res.json({message: 'Ya formas parte de este grupo'});
+  }
 })
 
 
@@ -879,16 +894,21 @@ app.post('/add-to-list', async (req, res) => {
     const list_id = searchList[0]._id;
     const list = await lists.findById(list_id);
     if (list.creator_id == req.body.sender) {
-      if (list.type == 'clasificación') {
-        insertData = {'item': req.body.item, 'list': list_id, 'prev': ""}; // prev has to be set
+      const itemsList = await listelements.find({item: req.body.item, list: list_id}).select('_id -item -list -votes -prev -__v');
+      if (itemsList==0){
+        if (list.type == 'clasificación') {
+          insertData = {'item': req.body.item, 'list': list_id, 'prev': ""}; // prev has to be set
+        } else {
+          insertData = {'item': req.body.item, 'list': list_id};
+        }
+        const newListElement = new listelements(insertData);
+        newListElement.save();
+        const update = await lists.updateOne({_id: list_id}, { $inc: {items: 1}}); // not working!!!
+        console.log(update)
+        res.status(201).json({message: 'El ítem ha sido añadido a la lista.', item: req.body.item});
       } else {
-        insertData = {'item': req.body.item, 'list': list_id};
+        res.status(200).json({message: 'El ítem ya está incluido en la lista.'});
       }
-      const newListElement = new listelements(insertData);
-      newListElement.save();
-      const update = await lists.updateOne({_id: list_id}, { $inc: {items: 1}}); // not working!!!
-      console.log(update)
-      res.status(201).json({message: 'El ítem ha sido añadido a la lista.', item: req.body.item});
     } else {
       res.status(401).json({message: 'Debes ser el/la propietario/propietaria de la lista para poder añadir el ítem.'});
     }
@@ -903,11 +923,16 @@ app.post('/add-to-group', async (req, res) => {
     const group_id = searchList[0]._id;
     const moderator = await members.find({group_id: group_id, user_id: req.body.sender, is_mod: true}).select('_id -user_id -group_id -is_mod -__v');
     if (moderator.length > 0) {
-      insertData = {'item': req.body.item, 'group': group_id};
-      const newFavoriteItem = new favoriteitems(insertData);
-      newFavoriteItem.save();
-      const update = await groups.updateOne({_id: group_id}, { $inc: {items: 1}});
-      res.status(201).json({message: 'El ítem ha sido añadido al grupo.', item: req.body.item});
+      const itemsList = await favoriteitems.find({item: req.body.item, group: group_id}).select('_id -item -group -__v');
+      if (itemsList.length==0) {
+        insertData = {'item': req.body.item, 'group': group_id};
+        const newFavoriteItem = new favoriteitems(insertData);
+        newFavoriteItem.save();
+        const update = await groups.updateOne({_id: group_id}, { $inc: {items: 1}});
+        res.status(201).json({message: 'El ítem ha sido añadido al grupo.', item: req.body.item});
+      } else {
+        res.status(200).json({message: 'El ítem ya está incluido en el grupo.'});
+      }
     } else {
       res.status(401).json({message: 'Debes ser un moderador del grupo para poder añadir el ítem.'});
     }
