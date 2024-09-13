@@ -560,6 +560,17 @@ app.get('/reject-request', async (req, res) => {
 
 
 
+// check if member
+
+app.get('/is-member', async (req, res) => {
+  const membersList = await members.find({user_id: req.query.user, group_id: req.query.group}).select('_id -user_id -group_id -is_mod -__v');
+  console.log(membersList);
+  if (membersList.length > 0) res.json({member: true})
+  else res.json({member: false})
+})
+
+
+
 
 
 // Comments
